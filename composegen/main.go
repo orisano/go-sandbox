@@ -19,6 +19,7 @@ import (
 var defaultPorts = map[string]int{
 	"postgres": 5432,
 	"mysql":    3306,
+	"redis":    6379,
 }
 
 type DBCommand struct {
@@ -31,14 +32,14 @@ func (c *DBCommand) FlagSet() *flag.FlagSet {
 	fs := flag.NewFlagSet("db", flag.ExitOnError)
 	fs.StringVar(&c.URL, "url", "", "url syntax connection string (required)")
 	fs.StringVar(&c.Tag, "tag", "latest", "image tag")
-	fs.StringVar(&c.Service, "s", "db", "docker-compose service name")
+	fs.StringVar(&c.Service, "s", "", "docker-compose service name")
 	return fs
 }
 
 type service struct {
 	Image       string            `yaml:"image"`
 	Command     string            `yaml:"command,omitempty"`
-	Environment map[string]string `yaml:"environment"`
+	Environment map[string]string `yaml:"environment,omitempty"`
 	Ports       []string          `yaml:"ports"`
 }
 
@@ -60,8 +61,20 @@ func (c *DBCommand) Run(args []string) error {
 	fmt.Println(`services:`)
 
 	port := defaultPort
-	if p := u.Port(); p != "" {
-		port, _ = strconv.Atoi(p)
+	if s := u.Port(); s != "" {
+		p, err := strconv.Atoi(s)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse port: %v", s)
+		}
+		port = p
+	}
+
+	serviceName := c.Service
+	if serviceName == "" && u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" {
+		serviceName = u.Hostname()
+	}
+	if serviceName == "" {
+		serviceName = u.Scheme
 	}
 
 	var s service
@@ -89,9 +102,14 @@ func (c *DBCommand) Run(args []string) error {
 			"POSTGRES_USER":     username,
 			"POSTGRES_PASSWORD": password,
 		}
+	case "redis":
+		s.Image = "redis:" + c.Tag
+		if password != "" {
+			s.Command = fmt.Sprintf("--requirepass %q", password)
+		}
 	}
 	var buf bytes.Buffer
-	err = yaml.NewEncoder(&buf).Encode(map[string]interface{}{c.Service: s})
+	err = yaml.NewEncoder(&buf).Encode(map[string]interface{}{serviceName: s})
 	if err != nil {
 		return errors.Wrap(err, "failed to encode service")
 	}
