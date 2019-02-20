@@ -1,0 +1,3 @@
+[[rule]]
+from = "www.google.com"
+to = "www.google.co.jp"
