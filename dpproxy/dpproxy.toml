@@ -1,3 +1,7 @@
 [[rule]]
 from = "www.google.com"
 to = "www.google.co.jp"
+
+[[rule]]
+from = "yahoo.co.jp"
+to = "www.google.co.jp"

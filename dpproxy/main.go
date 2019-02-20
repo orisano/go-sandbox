@@ -38,14 +38,14 @@ func main() {
 
 func run(listen, config string) error {
 	var c struct {
-		rule []*Rule
+		Rule []*Rule
 	}
 	if _, err := toml.DecodeFile(config, &c); err != nil {
 		return errors.Wrap(err, "failed to decode config")
 	}
 
-	replace := make(map[string]string, len(c.rule))
-	for _, r := range c.rule {
+	replace := make(map[string]string, len(c.Rule))
+	for _, r := range c.Rule {
 		replace[r.From] = r.To
 	}
 
