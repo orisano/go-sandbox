@@ -49,9 +49,7 @@ func run(listen, config string) error {
 		replace[r.From] = r.To
 	}
 
-	proxy := goproxy.NewProxyHttpServer()
-	originalDial := proxy.ConnectDial
-	proxy.ConnectDial = func(network string, addr string) (net.Conn, error) {
+	rewriteAddr := func(network string, addr string) string {
 		if network == "tcp" {
 			u := &url.URL{Host: addr}
 			host := u.Hostname()
@@ -59,6 +57,20 @@ func run(listen, config string) error {
 				addr = to + addr[len(host):]
 			}
 		}
+		return addr
+	}
+
+	proxy := goproxy.NewProxyHttpServer()
+
+	// goproxy does not use DialContext
+	proxy.Tr.Dial = func(network, addr string) (conn net.Conn, e error) {
+		addr = rewriteAddr(network, addr)
+		return net.Dial(network, addr)
+	}
+
+	originalDial := proxy.ConnectDial
+	proxy.ConnectDial = func(network string, addr string) (net.Conn, error) {
+		addr = rewriteAddr(network, addr)
 		if originalDial != nil {
 			return originalDial(network, addr)
 		}
