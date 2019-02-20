@@ -18,30 +18,45 @@ type Rule struct {
 	To   string
 }
 
+type Options struct {
+	config  string
+	addr    string
+	verbose bool
+}
+
 func main() {
 	log.SetFlags(0)
 	log.SetPrefix("dpproxy: ")
 
-	config := flag.String("c", "", "config file (required)")
-	listen := flag.String("l", ":8080", "listen addr")
+	var opt Options
+	flag.StringVar(&opt.config, "c", "", "config file (required)")
+	flag.StringVar(&opt.addr, "l", ":8080", "listen addr")
+	flag.BoolVar(&opt.verbose, "v", false, "verbose")
 	flag.Parse()
 
-	if *config == "" {
+	if opt.config == "" {
 		flag.Usage()
 		os.Exit(2)
 	}
 
-	if err := run(*listen, *config); err != nil {
+	if err := run(&opt); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(listen, config string) error {
+func run(opt *Options) error {
 	var c struct {
 		Rule []*Rule
 	}
-	if _, err := toml.DecodeFile(config, &c); err != nil {
+	if _, err := toml.DecodeFile(opt.config, &c); err != nil {
 		return errors.Wrap(err, "failed to decode config")
+	}
+
+	if opt.verbose {
+		log.Print("rewrite rules:")
+		for _, r := range c.Rule {
+			log.Print("  - ", r.From, " -> ", r.To)
+		}
 	}
 
 	replace := make(map[string]string, len(c.Rule))
@@ -55,6 +70,9 @@ func run(listen, config string) error {
 			host := u.Hostname()
 			if to, ok := replace[host]; ok {
 				addr = to + addr[len(host):]
+				if opt.verbose {
+					log.Print("rewrite ", host, " -> ", to)
+				}
 			}
 		}
 		return addr
@@ -77,5 +95,6 @@ func run(listen, config string) error {
 		return net.Dial(network, addr)
 	}
 
-	return http.ListenAndServe(listen, proxy)
+	log.Print("listen ", opt.addr, " ...")
+	return http.ListenAndServe(opt.addr, proxy)
 }
