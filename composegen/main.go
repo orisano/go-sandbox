@@ -13,6 +13,7 @@ import (
 
 	"github.com/orisano/subflag"
 	"github.com/pkg/errors"
+	"github.com/xo/dburl"
 	"gopkg.in/yaml.v2"
 )
 
@@ -52,6 +53,9 @@ func (c *DBCommand) Run(args []string) error {
 		return errors.Wrap(err, "failed to parse url")
 	}
 	dialect := u.Scheme
+	if u, err := dburl.Parse(c.URL); err == nil {
+		dialect = u.Unaliased
+	}
 	defaultPort, ok := defaultPorts[dialect]
 	if !ok {
 		return errors.Errorf("unsupported dialect: %s", dialect)
