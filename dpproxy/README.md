@@ -28,7 +28,7 @@ to = "to.example.com"
 ```
 
 ## Author
-Nao YONASHIRO (@orisano)
+Nao Yonashiro (@orisano)
 
 ## License
 MIT
