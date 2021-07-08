@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/elazarl/goproxy"
-	"github.com/pkg/errors"
 )
 
 type Rule struct {
@@ -49,7 +49,7 @@ func run(opt *Options) error {
 		Rule []*Rule
 	}
 	if _, err := toml.DecodeFile(opt.config, &c); err != nil {
-		return errors.Wrap(err, "failed to decode config")
+		return fmt.Errorf("decode config: %w", err)
 	}
 
 	if opt.verbose {
